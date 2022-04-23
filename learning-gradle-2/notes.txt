@@ -1,0 +1,90 @@
+Learning gradle 요약
+
+	설치
+
+		gvm
+			curl -s get.gvmtool.net | bash
+				gvm help
+
+		gradle
+			gvm install gradle
+				gvm list gradle
+				gvm default gradle <version>
+
+		set GRADLE_HOME=D:\dev\gradle-2.12
+			set GRADLE_OPTS=-Dfile.encoding=UTF-8 -Xmx1024m -Dorg.gradle.daemon=true
+				gradle -v
+
+		http://www.taras-shum.com/2014/12/gradle-project-creation-via-gradle.html
+			e %USERPROFILE%\.gradle\init.gradle
+				gradle.beforeProject { prj ->
+					prj.apply from: 'http://www.tellurianring.com/projects/gradle-plugins/gradle-templates/apply.groovy'
+				}
+			gradle createJavaClass
+			gradle createJavaProject
+			gradle createWebappProject
+			gradle initJavaProject
+			gradle initWebappProject
+
+
+	프로젝 초기화
+
+		gradle help --task init
+		gradle help --task build
+
+		md petstore
+		cd petstore
+			gradle init --type pom
+
+			md petstore-core
+			cd petstore-core
+				gradle init --type java-library
+				e ..\settings.gradle
+					include 'petstore-core'
+				cd ..
+			gradle --daemon clean build
+
+			md petstore-api
+			cd petstore-api
+				gradle init --type java-library
+					e ..\settings.gradle
+						include 'petstore-api'
+					e build.gradle
+						dependencies {
+							compile project(':petstore-core')
+						}
+
+			md petstore-webapp
+			cd petstore-webapp
+				gradle init --type java-library
+					e ..\settings.gradle
+						include 'petstore-webapp'
+					e build.gradle
+						dependencies {
+							compile project(':petstore-core')
+						}
+
+			전체 빌드
+				gradle build
+
+			unit test 실행
+				gradle test
+
+			일부 빌드
+				gradle ?
+
+	task hello << {
+	}
+
+	gradle --daemon tasks
+	gradle help --task <name>
+	gradle help --task dependencies
+	gradle --daemon properties
+	~/.gradle/gradle.properties
+	gradle test
+		build/reports/tests/index.html
+	gradle init --type java-library
+	gradle init --type
+	set GRADLE_OPTS="-Dorg.gradle.daemon=true"
+		~/.gradle/gradle.properties에 저장 가능
+			org.gradle.daemon=true

@@ -1,0 +1,3432 @@
+Learning gradle 요약 시작 (book) Gradle 철저 입문, 와타비키 타쿠마
+
+1부
+
+1장 그레이들의 세계
+
+	예제 https://github.com/gilbutITbook/006791
+	make ==> ant ==> Maven ==> Gradle
+	유연한 구조
+		메서드나 클래스 추출
+		apply from 이용하여 스크립트 분할 및 재사용
+		buildSrc 이용하여 확장
+		재사용 가능한 라이브러리 사용 가능
+
+2장. 설치와 설정
+
+	2.1.2 GVM으로 설치하기
+
+		GVM 설치
+
+			% export http_proxy=http://<proxyhost>:<proxyport>
+			% curl -s get.gvmtool.net | bash ==> ~/.bashrc가 자동 갱신됨
+			% gvm help
+				% gvm offline enable
+				% gvm offline disable
+
+		그레이들 설치
+
+			% gvm install gradle
+			% gvm list gradle
+			% gvm install gradle <version>
+			% gvm default gradle <version>
+			% gvm list gradle
+
+	2.1.3 Zip 파일로 설치하기
+
+	2.2 기본 설정과 동작 확인
+
+		- GRADLE_HOME 설정 및 %GRADLE_HOME%\bin을 PATH에 추가
+
+		- JAVA_HOME 설정 및 %JAVA_HOME%\bin을 PATH에 추가
+
+		- JAVA_OPTS 설정
+			export JAVA_OPTS=-Dfile.encoding=UTF-8
+
+		- GRADLE_OPTS 설정
+			export GRADLE_OPTS=-Xmx1024m
+
+		% gradle -v
+
+3장 그레이들 시작
+
+	3.1 그루비 문법
+
+		특징
+			문자열 ", '
+			메서드 호출 시 괄호 생략
+			def 이용 형 생략 가능
+			def 이용 시 duck-typing 이 사용됨
+			클로저
+
+				def clos1 = { msg -> println "Hi, $msg" }
+				def clos2 = { println "Hi, $it" }
+				clos1.call('John')
+				clos2('Bob')
+
+	3.2 Hello Gradle World
+
+	3.2.1 작성 및 실행
+
+		build.gradle
+
+			task hello << {
+				println 'Hello Gradle World'
+			}
+
+		% gradle hello
+
+	3.2.2 결과 확인
+
+	3.2.3 내장 태스크
+
+		% gradle tasks
+
+		% gradle help --task <task-name>
+
+		% gradle properties
+
+	3.2.4 CLI 옵션
+
+		-i, -s, -S, -d
+
+			기본 로그 레벨: ERROR
+
+		-b
+
+			% gradle -b build-new.gradle
+
+	3.3 프로젝트 자동화와 빌드
+
+	3.3.1 자동 생성
+
+		% gradle init --type java-library
+
+		gradle은 메이븐 디렉토리 구조를 사용
+
+	3.3.2 실행 및 확인
+
+		% gradle tasks
+
+		% gradle -gui
+
+		% gradle build
+
+		프록시 필요하면 ~/.gradle/gradle.properties에 설정
+
+			systemProp.http.proxyHost=www.example.com
+			systemProp.http.proxyPort=8080
+			systemProp.https.proxyHost=www.example.com
+			systemProp.https.proxyPort=8080
+
+		% gradle build		// 모두 UP-TO-DATE 표시됨
+
+		% gradle clean
+
+	3.3.3 테스트 실행 및 결과 확인
+
+		% gradle test
+
+		출력
+
+			build/reports/tests/index.html
+
+	3.4 웹 애플리케이션 빌드
+
+	3.4.1 웹 프로젝트 작성
+
+		% gradle init --type java-library
+
+		수정 (이거 plugins 로 대체가능한 거 아닌가)
+
+			buildscript {
+				repositories {
+					jcenter()
+				}
+				dependencies {
+					classpath 'com.bmuschko:gradle-tomcat-plugin:2.0'
+				}
+			}
+			apply plugin: 'war'
+			apply plugin: 'com.bmuschko.tomcat'
+			repositories {
+				mavenCentral()
+			}
+			dependencies {
+				providedCompile 'javax:javaee-web-api:6.0'
+				compile 'org.slf4j:slf4j-api:1.7.5'
+				testCompile 'junit:junit:4.11'
+
+				def tomcatVersion = '7.0.52'
+				tomcat "org.apache.tomcat.embed:tomcat-embed-core:${tomcatVersion}", "org.apache.tomcat.embed:tomcat-embed-logging-juli:${tomcatVersion}"
+				tomcat("org.apache.tomcat.embed:tomcat-embed-jasper:${tomcatVersion}") {
+					exclude group: 'org.eclipse.jdt.core.compiler', module: 'ecj'
+				}
+			}
+
+		HelloServlet.java 작성
+
+		index.html 작성
+
+	3.4.2 실행
+
+		% gradle tomcatRunWar
+
+		% gradle tRW
+
+		% start http://localhost:8080/hello
+
+		% start http://localhost:8080/hello/index.html
+
+	3.4.3 War 생성
+
+		% gradle war
+
+		출력
+
+			build/libs/<web-project>.war
+
+	3.5 편리한 기능
+
+	3.5.1 데몬
+
+		% gradle --daemon hello		3.224초
+
+		% gradle --daemon hello		0.818초
+
+		환경 변수에 저장 가능
+
+			GRADLE_OPTS="-Dorg.gradle.daemon=true"
+
+		~/.gradle/gradle.properties에 저장 가능
+
+			org.gradle.daemon=true
+
+		데몬은 기본 3시간 동안 실행됨
+
+		% gradle -stop
+
+	3.5.2 그레이들 래퍼
+
+		초기화
+
+			% gradle wrapper
+
+			% gradlew tasks
+
+		팀 개발 시에는 그레이들 버전 고정 위해 래퍼 추천
+
+4장. 자바 프로젝트 빌드
+
+	4.1 자바 프로젝트에 왜 플러그인이 필요한가
+
+	4.2 Java 플러그인이란
+
+	4.2.1 소스 세트
+
+	4.2.2 태스크
+
+		// 주요 태스크 집합 1
+
+			compileJava
+
+			processResources
+
+			classes
+
+			compileTestJava
+
+			processTestResources
+
+		// 주요 태스크 집합 2
+
+			testClasses
+
+			jar
+
+			javadoc
+
+			test
+
+			uploadArchives
+
+			clean
+
+			clean<TaskName>		// cleanJavadoc
+
+			assemble
+
+			check
+
+			build
+
+			buildNeeded
+
+			buildDependents
+
+		소스 세트 foo를 추가하면 태스크가 자동 추가됨
+
+			compileFooJava
+
+		다음 태스크가 가장 일반적으로 사용됨
+
+			clean
+
+			build
+
+			javadoc
+
+			jar
+
+	4.2.3 디렉토리 규칙
+
+	4.2.4 속성
+
+		Java 플러그인이 제공하는 속성의 집합이 있음
+
+		두 가지 방법으로 속성 사용 가능
+
+			println project.docsDir
+			println docsDir
+
+		소스 세트 단위로 제공되는 속성 집합이 있음
+
+			println sourceSets.test.compileClasspath			#1
+			println sourceSets['test'].compileClasspath			#2
+
+			Q: #1은 아마도 exception 발생 가능?
+
+	4.3 자바 프로젝트에 적용하기
+
+	4.3.1 기본 빌드 정의 및 실행
+
+		build.gradle
+
+			apply plugin: 'java'
+			def defaultEncoding: 'UTF-8'
+			compileJava.options.encoding = defaultEncoding
+			sourceCompatibility = 1.7
+			targetCompatibility = 1.7
+
+		BasicArithmeticOperations.java 작성
+
+		% gradle build
+
+	4.3.2 유닛 태스트 코드를 추가해 봄
+
+		build.gradle
+
+			apply plugin: 'java'
+			def defaultEncoding: 'UTF-8'
+			[compileJava, compileTestJava]*.options*.encoding = defaultEncoding
+			sourceCompatibility = 1.7
+			targetCompatibility = 1.7
+			repositories {
+				mavenCentral()
+			}
+			dependencies {
+				testCompile "junit:junit:4.11"
+			}
+
+		소스 세트가 늘어날 때마다 UTF-8 지정하는 것이 불편하다면, 아래를 지정하여 일괄 지정.
+
+			tasks.withType(JavaCompile) {
+				options.encoding = 'UTF-8'
+			}
+
+	4.3.3 기타 작업
+
+		JDK 8에서 sourceCompatibility = 1.7을 사용하면 경고 발생하는데
+
+			FIX
+
+				compileJava {
+					options.bootClasspath = '/.../jdk1.7.0_55.jdk/Contents/Home/jre/lib/rt.jar'
+				}
+
+		속성 파일에 대해 native2ascii 실행하려면
+
+			방법 1
+
+				import org.apache.tools.ant.filters.EscapeUnicode
+				processResources {
+					filter(EscapeUnicode)
+				}
+
+			방법 2: 디폴트 인코딩이 아닐 때
+
+				task native2ascii << {
+					ant.native2ascii(src: 'src/main/resources', dest: processResources.destinationDir, encoding: 'MS932')
+				}
+
+		JAR 파일 설정
+
+			파일명 지정
+
+				jar {
+					archiveName = 'example.jar'
+				}
+
+			MANIFEST.MF 지정
+
+				jar {
+					manifest {
+						attributes('Implementation-Title': 'Arithmetic Lib', 'Implementation-Version': version, 'Commit-Id': commitId)
+					}
+				}
+
+		Javadoc 생성
+
+			build 태스크 만으로는 javadoc이 생성되지는 않는다. 명시적 실행 필요.
+
+			% gradle javadoc
+
+			javadoc {
+				destinationDir = "${buildDir}/dist/javadoc"
+				title = "Example library v1.0"
+				options.links << 'http://docs.oracle.com/javase/jp/7/api"
+			}
+
+			javadoc 명령의 -link 옵션이 파라미터를 전달함.
+
+			% gradle clean
+
+			% gradle cleanJavadoc
+
+	4.4 Java 플러그인 상세 사항
+
+	4.4.1 태스크 의존 관계
+
+	4.4.2 상세 사항
+
+	4.5 규칙에서 벗어난 프로젝트에 적용
+
+	4.5.1 디렉토리 구성 변경
+
+	4.5.2 환경 구성(configuration)으로 의존관계 변경하기
+
+		Java 플러그인의 기본 환경구성
+
+			compile
+			runtime
+			testCompile
+			archives
+			default
+
+		configuration은 직접 추가해줄 수도 있고, War 플러그인처럼 configuration을 추가해야 하는 경우도 있다.
+
+	4.5.3 소스 세트 추가
+
+		Java 플러그인은 main, test 두 가지 소스 세트를 기본 제공
+
+		추가
+
+			sourceSets {
+				integrationTest
+			}
+
+		Java 플러그인이 다음 규칙을 자동 추가함
+
+			src/integrationTest/java
+			src/integrationTest/resources
+
+		아래 configuration도 자동 추가됨
+
+			integrationTestCompile
+			integrationTestRuntime
+
+		이것을 이용하여 소스 세트의 의존 관계를 정의할 수 있음.
+
+			dependencies {
+				integrationTestCompile 'xxx:xxx:xxx'
+				integrationTestRuntime 'yyy:yyy:yyy'
+			}
+
+		통합 테스트 실행을 위해서 Test형 태스크 추가
+
+			task integrationTest(type: Test) {
+				testClassesDir = sourceSets.integrationTest.output.classesDir
+				classpath = sourceSets.integrationTest.runtimeClasspath
+			}
+
+		% gradle integrationTest
+
+	4.6 Application 플러그인
+
+	4.6.1 플러그인 사용
+
+		build.gradle
+
+			apply plugin: 'java'
+			apply plugin: 'application'
+			compileJava.options.encoding = 'UTF-8'
+			sourceCompatibility = 1.7
+			targetCompatibility = 1.7
+			mainClassName = 'com.example.cli.SimpleCalc'
+			applicationName = 'SimpleCalc'
+			repositories {
+				mavenCentral()
+			}
+			dependencies {
+				compile 'commons-cli:commons-cli:1.2'
+			}
+			run {
+				standardInput = System.in
+			}
+
+		SimpleCalc.java 작성
+
+	4.6.2 실행
+
+		% gradle run
+
+		CTRL-C 로 종료
+
+	4.6.3 실행용 압축 파일 작성
+
+		% gradle distZip
+
+		출력
+
+			build/distributions/SimpleCalc.zip
+			build/libs/arithmetic-lib_withApplication.jar
+			build/scripts/SimpleCalc
+			build/scripts/SimpleCalc.bat
+
+	4.7 War 플러그인
+
+	4.7.1 동작
+
+	4.7.2 속성
+
+	4.7.3 configuration
+
+		War 플러그인이 제공하는 configuration 두 가지
+
+			providedCompile		컴파일할 때 클래스패스에서 제외하고 싶은 것 지정
+
+			providedRuntime		실행할 때 클래스패스에서 제외하고 싶은 것 지정
+
+	4.7.4 war 태스크 지정
+
+		def env = 'dev'
+		war {
+			webXml = file("src/web-${env}.xml")
+		}
+
+		주의 사항: war 플러그인을 사용할 때는 'war', 'eclipse-wtp' 두 가지 모두 이용해야 한다.
+
+		build.gradle
+
+			 apply-plugin: 'war'
+			 apply-plugin: 'eclipse-wtp'
+
+		gradle eclipse
+
+			wtp 프로젝에 필요한 파일이 생성됨
+
+5장. 그레이들 기초
+
+	5.1 그레이들의 빌드
+
+	5.1.1 빌드란
+
+	5.1.2 입력 정보
+
+		초기화
+
+			init.gradle
+
+		설정
+
+			settings.gradle
+			멀티 프로젝에서는 반드시 필요한 파일임
+
+		빌드
+
+			build.gradle
+
+		속성파일
+
+			gradle.properties
+
+		환경 변수, CLI 인수
+
+		buildSrc 프로젝트
+
+			빌드 시 참조하는 클래스 파일 및 플러그인 코드 저장
+
+		// 도메인 개체 매핑
+
+			Gradle object		init.gradle
+			Settings object		settings.gradle
+			Project object		build.gradle
+
+	5.1.3 빌드 흐름
+
+		build.gradle
+
+			task greet << {
+				println 'hello ' + user
+			}
+
+		% gradle -Puser=kim greet
+
+		세 가지 실행 모드
+
+			CLI
+			데몬
+			GUI
+
+		여러 실행 모드가 함께 지정될 때 우선 순위
+
+			1 내장 옵션 -h, -v
+			2 --gui
+			3 --daemon
+
+		3단계
+
+			초기화
+
+				싱글, 멀티 판정
+				Project 객체 생성
+				도메인 객체 생성
+
+			설정
+
+				Task 그래프 생성
+
+			실행
+
+				Task 객체를 추출하여 실행
+
+	5.2 아키텍처와 주요 기능
+
+	5.2.1 물리 구조
+
+	5.2.2 지탱 구조와 표준 기능
+
+		실행을 지탱하는 기술
+
+			설정 자동 로드
+			프로젝트 탐색
+			태스크 그래프
+
+		그레이들 표준 기능
+
+			파일 조작
+			로그
+
+	5.3 설정 자동 로드
+
+	5.3.1 초기화 스크립트로 설정하기
+
+		예를 들면 아래 코드를 홈에 정의하면 좋지 않을까
+
+			allprojects {
+				repositories {
+					mavenCentral()
+				}
+			}
+
+		초기화 스크립트 로딩 순서
+
+			1 -I <file> or --init-script <file>
+			2 ~/.gradle/init.gradle
+			3 ~/.gradle/init.d/<any-name>.gradle
+			4 %GRADLE_HOME%/.gradle/init.d/<any-name>.gradle
+
+	5.3.2 속성 파일을 이용하여 설정하기
+
+		로딩 순서
+
+			1 -D or --system-prop
+			2 <project-home>/gradle.properties
+			3 ~/gradle.properties
+
+		여러 곳에 같은 설정이 지정되면 마지막 설정이 사용됨
+
+	5.4 프로젝트 탐색
+
+	5.4.1 프로젝트 구성과 탐색 관계
+
+		- 싱글
+		- 멀티
+
+		프로젝트 구성 판정은 settings.gradle을 이용하여 한다.
+		멀티 프로젝트의 경우에는 settings.gradle이 반드시 필요하고, 거기에 sub-project을 추가하여 준다.
+
+	5.4.2 설정 스크립트에 따른 구성
+
+		로딩 순서
+
+			1 -C <file> or --settings-file <file>
+			2 그레이들 규칙에 따라 특정 위치에 settings.gradle 파일을 배치
+				1 ./settings.gradle
+				2 ../settings.gradle
+				3 ../master/settings.gradle
+				단 -u (--no-search-upward)가 있으면 2, 3은 생략
+
+		결국 settings.gradle을 찾지 못하면 싱글 프로젝트로 판정.
+
+	5.5 Task 그래프
+
+	5.5.1 그래프 개요
+
+	5.5.2 태스크 그래프 개요
+
+		태스크 그래프에 영향을 주는 요소
+
+			의존 관계에 따라 구축됨
+			같은 태스크가 실행 태스크로 지정된 경우
+			태스크에 순서가 지정된 경우
+			종료 태스크가 설정된 경우
+
+	5.6 파일 조작
+
+	5.6.1 표준 파일 조작 기능
+
+		파일 참조
+		파일 복사
+		파일 삭제
+		디렉토리 생성
+
+	5.6.2 파일 참조
+
+		단일 파일
+
+			File file = file('src/main/java/Main.java')
+
+			File file = file(new File('src/dummy.txt'))
+
+		파일 경로 이외의 참조
+
+			URL url = new URL('file:/index.html')
+			File index = file(url)
+
+			or
+
+			URI uri = new URI('file:/index.html')
+			File index = file(uri)
+
+		파일 검증
+
+			File existDir = file('src/main/existDir', PathValidation.DIRECTORY)
+
+		% gradle
+
+			디렉토리가 없으면 stop
+
+		PathValidation
+			.DIRECTORY
+			.FILE
+			.EXISTS
+			.NONE
+
+	5.6.3 파일 컬렉션을 이용한 파일 참조
+
+		컬렉션 가져오기
+
+			FileCollection collections = files('file1.txt', 'file2.txt')
+
+			FileCollection collections = files('file1.txt', new File('file2.txt'), new URL('file:/index.html'))
+
+			List list = [new File('file1.txt'), new File('file2.txt')]
+
+		파일 컬렉션 변환
+
+			List list = fileCollection as List
+
+			Set set = fileCollection as Set
+
+			File[] array = fileCollection as File[]
+
+		파일 컬렉션 연산
+
+			collections2 = collection1 + file('file2.txt')
+			assert collection2.files.size() == collection1.files.size() - 1
+
+			collections2 = collection1 - file('file2.txt')
+
+		파일 컬렉션 필터링
+
+			FileCollection c1 = files('file1.txt', 'file2.txt', 'file3.html')
+			FileCollection textFiles = c1.filter { collectionFile ->
+				collectionFile.name.endsWith .txt
+			}
+
+		getAsPath
+
+			// 여러 파일을 classpath 형식으로 출력할 때 유용
+			String classpath = collection.asPath
+
+		컬렉션 상태 파악
+
+			c.contains
+			c.isEmpty
+			c.stopExecutionIfEmpty
+
+	5.6.4 파일 트리를 이용한 참조
+
+		참조 생성
+
+			FileTree sourceTree = fileTree('src')
+
+			여기에 ant 패턴 (*.html, **/*.html, ??.html) 사용 가능
+			/ 또는 \ 로 끝나는 패턴은 /**, \** 로 간주함
+
+			FileTree javaOnly = sourceTree.include('**/*.java')
+
+			FileTree nonJava = sourceTree.exclude('**/*.java')
+
+		프린트
+
+			tree.each { println it.name }
+
+		클로저 이용
+
+			FileTree tree = fileTree('src') {
+				include '**/*.java'
+				exclude '**/Something.java'
+			}
+			tree.each { print it.name }
+
+		맵 이용
+
+			FileTree tree = fileTree(dir: 'src', include: '**/*.java', exclude: '**/Something.java')
+			tree.each { print it.name }
+
+		filter()와 비슷한 matching()
+
+	5.6.5 파일 복사
+
+		CopySpec 사용
+
+			copy {
+				// CopySpec 사용
+			}
+
+		예
+
+			copy {
+				from 'template'
+				into 'output'
+				rename 'template.java', "${targetName}.java"
+			}
+
+		파일명 변경
+
+			rename
+
+		복사 시 파일 편집
+
+			filter() { line ->
+				line.replaceAll 'NAME', 'value'
+			}
+
+		복사시 파일 편집
+
+			expand - 템플릿 파일 이용 가능
+
+			copy {
+				from 'template'
+				into 'output'
+				expand packageName: 'com.example.bean',
+					className: targetName,
+					fields: [
+						'String': 'name',
+						'int': 'value'
+					]
+				rename 'template.java', "${targetName}.java"
+			}
+
+	5.6.6 파일 삭제
+
+		delete 'file1.txt', 'file2.txt'
+
+	5.6.7 디렉토리 생성
+
+		mkdir '../dir1/dir2'
+
+	5.7 로그
+
+	5.7.1 그레이들 로그
+
+	5.7.2 logger 속성 이용
+
+	5.7.3 외부 로그 프로그램과의 매핑
+
+		logging.captureStandardError LogLevel.INFO
+
+		이렇게 해두면 평소에는
+
+			println 만 출력되고, System.err.println은 출력이 안됨.
+
+		% gradle -i 로 실행하면
+
+			prtinln 과 System.err.println 모두 출력됨
+
+6장. 스크립트 파일 작성
+
+	6.1.1 파일 구조
+
+		그루비 스크립트
+			gradle
+				스크립 블록
+				처리문
+
+		파일 구조
+
+			// 처리문
+			...
+
+			configuration {
+				// configuration 을 위한 영역
+				...
+			}
+
+	6.1.2 스크립트 파일의 공통 요소
+
+		- 지역 변수
+		- 시스템 속성
+		- 확장 속성
+
+		여기에 빌드 스크립트에는
+
+		- 프로젝트 속성
+
+		이 더 있어서, 총 4가지 요소가 있다.
+
+		시스템 속성 1
+
+			build.gradle
+
+				task greet << {
+					println System.properties['message']
+				}
+
+			% gradle -Dmessage=Hello greet
+
+		시스템 속성 2
+
+			gradle.properties
+
+				systemProp.message=Hello
+
+			build.gradle
+
+				task greet << {
+					println System.properties['message']
+				}
+
+			% gradle greet
+
+		확장 속성
+
+			'ext' 라는 이름의 영역으로 암묵적 정의되어 이미 존재함.
+
+			build.gradle
+
+				ext {
+					key1 = 'value1'
+					key2 = 'value2'
+				}
+
+		프로젝트 속성 1
+
+			build.gradle
+
+				task greet << {
+					println message
+				}
+
+			1 순위 ./gradle.properties (2 순위 ~/.gradle/gradle.properties)
+
+				message=Hello
+
+			% gradle greet
+
+		프로젝트 속성 2 (3 순위)
+
+			% export ORG_GRADLE_PROJECT_message=Hello
+
+			build.gradle
+
+				task greet << {
+					println message
+				}
+
+			% gradle greet
+
+		프로젝트 속성 3 (4 순위)
+
+			build.gradle
+
+				task greet << {
+					println message
+				}
+
+			% gradle -Dorg.gradle.project.message=Hello greet
+
+		프로젝트 속성 4 (5 순위)
+
+			build.gradle
+
+				task greet << {
+					println message
+				}
+
+			% gradle -Pmessage=Hello greet
+
+	6.1.3 스크립트 블록과 도메인 객체
+
+		// repository 로딩 후 확인
+
+		repositories.each { print it.name }
+		repositories {
+			mavenCentral()
+		}
+		repositories.each { print it.name }
+
+	6.1.4 주요 스크립트 블록
+
+		initscript
+
+		buildscript
+
+		allprojects
+
+		subprojects
+
+		configurations
+
+		dependencies
+
+		repositories
+
+		artifacts
+
+	6.2 그레이들 주요 도메인 객체
+
+		Project
+
+		Task
+
+		Gradle
+
+		Settings
+
+		ExtensionAware
+
+		ExtraPropertiesExtension
+
+	6.2.1 Project 객체
+
+		% gradle
+
+		% gradle showDescription
+
+		주요 API
+
+			프로젝트 참조 API
+
+			태스크 정의 1
+
+				task hello << {
+					println 'Hello World'
+				}
+
+			태스크 정의 2
+
+				def helloTask = task('hello')
+				helloTask << { println 'Hello World' }
+
+		멀티 프로젝트에서 특정 프로젝트에 대해서만 처리하려면 project.name 사용
+
+			gradle.allprojects { project ->
+				if (project.name == 'project1') {
+					project.beforeEvaluate {
+						println project.name + ' beforeEvaluate'
+					}
+					project.afterEvaluate {
+						println project.name + ' afterEvaluate'
+					}
+				}
+			}
+
+	6.2.2 Task 객체
+
+		% gradle tasks
+
+		주요 API
+
+			task myActionTask {
+				doFirst {
+					println 'One'
+				}
+			}
+			myActionTask.doLast {
+				println 'Two'
+			}
+
+			% gradle myActionTask
+			One
+			Two
+
+		leftshift() 는 태스크의 마지막에 액션을 추가해주는 groovy API.
+		<< 는 doLast의 단축형.
+
+	6.2.3 Gradle 객체
+
+		콜백 API
+
+		build.gradle
+
+			settingsEvaluated {
+				println '1'
+			}
+			projectsLoaded {
+				println '2'
+			}
+			beforeProject {
+				println '3'
+			}
+			afterProject {
+				println '4'
+			}
+			projectsEvaluated {
+				println '5'
+			}
+			buildFinished {
+				println '6'
+			}
+
+		% gradle help
+		1
+		2
+		3
+		4
+		5
+		:help
+		BUILD SUCCESSFUL
+		6
+
+	6.2.4 Settings 객체
+
+		주요 API
+
+			include()			지정한 프로젝트를 계층형 멀티 프로젝트에 추가
+
+			includeFlag()		지정한 프로젝트를 단층형 멀티 프로젝트에 추가
+
+	6.2.5 ExtensionAware 객체
+
+		Project 에 커스텀 클래스를 속성으로 확장하기 위해 사용
+
+	6.2.6 ExtraPropertiesExtension 객체
+
+		'ext'에 추가 속성을 정의
+
+			project.ext.set('property', 'value')
+			if (project.ext.has('property')) {
+				println project.ext.get('property')
+			}
+
+		복수 개를 정의할 때 클로저 사용 가능
+
+			ext {
+				key1 = 'value1'
+				key2 = 'value2'
+			}
+
+	6.3 태스크 작성
+
+		실행
+
+			task hello << {
+				println 'hello'
+			}
+
+		설정
+
+			task hello2 {
+				println 'hello2'
+			}
+
+		% gradle hello hello2
+
+		hello2는 설정이므로 일단 먼저 실행되고,
+		hello는 실행 블록이 있으므로 실행되고,
+		hello2의 실행 블록에는 실행 블록이 없으므로 무출력
+
+		출력결과는
+
+			hello2
+			hello
+			<nothing>
+
+		태스트 선언, 설정, 처리를 동시에 하는 방법 1
+
+			task showDescription
+			showDescription.description = 'one'
+			showDescription << {
+				println description
+			}
+
+		태스트 선언, 설정, 처리를 동시에 하는 방법 2
+
+			task showDescription << {
+				println description
+			}
+			showDescription.description = 'one'
+
+		태스트 선언, 설정, 처리를 동시에 하는 방법 3 추천)
+
+			task showDescription(descrtiption: 'one') << {
+				println description
+			}
+
+		태스트 선언, 설정, 처리를 동시에 하는 방법 4
+
+			task(showDescription, descrtiption: 'one') << {
+				println description
+			}
+
+		표준 범용 태스크
+
+			Copy
+
+			Delete
+
+			Exec
+
+			JavaExec
+
+			Sync
+
+			Tar
+
+			Zip
+
+		Copy 태스크 사용 1
+
+			task myCopy(type: Copy) {
+				from 'original'
+				into 'target'
+			}
+
+		Copy 태스크 사용 2
+
+			def myCopy = new Copy()
+			myCopy.from('original')
+			myCopy.to('target')
+
+		동적 태스크 정의
+
+			개수가 변하는 대상에 대해 태스크를 정의하고 싶을 때
+
+				def instances = ['App': '1.1.1.1', 'Db': '2.2.2.2', 'Mail': '3.3.3.3']
+
+				instances.each { serverType, ipAddress ->
+					task "show${serverType}" << {
+						println ${ipAddress}
+					}
+				}
+
+				% gradle showApp showDb showMail
+
+	6.3.2 의존 관계 정의 방법
+
+		build.gradle
+			task done << {
+			}
+
+			task doing << {
+			}
+
+			task todo << {
+			}
+
+			doing.dependsOn todo
+			done.dependsOn doing
+
+		배열로 지정 가능
+
+			done.dependsOn doing, reviewing
+
+		클로저로 지정 가능
+
+			done.dependsOn {
+				[doing, reviewing]
+			}
+
+		태스크를 패턴 검색해서 지정 가능
+
+			done.dependsOn {
+				tasks.findAll { task ->
+					task.name ==~ /.*ing/
+				}
+			}
+
+	6.3.3 태스크 규칙 정의 방법
+
+		나중에 다시
+
+	6.3.4 태스크 제어
+
+		나중에 다시
+
+	6.3.5 태스크 덮어쓰기
+
+		task assemble(overwrite: true) << {
+			...
+		}
+
+	6.3.6 태스크 조건 실행
+
+		build.gradle
+
+			task specialTask << {
+				...
+			}
+			specialTask.onlyIf {
+				buildType == 'partial-build'
+			}
+
+		% gradle -PbuildType=partial-build specialTask
+
+	6.3.7 태스크 순서 지정
+
+		build.gradle
+
+			task before << {
+				println 'one'
+			}
+
+			task after << {
+				println 'two'
+			}
+
+			after.mustRunAfter before
+
+		% gradle after before
+		one
+		two
+
+	6.3.8 종료 태스크
+
+		build.gradle
+
+			task normalTask {
+				println 'normal'
+			}
+			task finalizerTask {
+				println 'finalizer'
+			}
+			normalTask.finalizedBy finalizerTask
+
+		% gradle -q normalTask
+		normal
+		finalizer
+
+		예외가 발생해도 finalizerTask는 실행된다
+
+	6.4 플러그인 작성
+
+		스킵
+
+	6.5 멀티 프로젝트의 스크립트 파일 작성
+
+	6.5.1 레이아웃과 작성 방법 조합
+
+		멀티
+			- 계층
+				- 모아서 작성
+				- 따로따로 작성 <=== most popular
+			- 단층
+				- 모아서 작성
+				- 따로따로 작성
+
+	계층형 모아서 작성
+
+		settings.gradle
+
+			include 'arithmetic-lib', 'arithmetic-main'
+
+			or
+
+			include 'arithmetic-lib'
+			include 'arithmetic-main'
+
+		build.gradle
+
+			subprojects {
+				apply plugin: 'java'
+				compileJava.options.encoding = 'UTF-8'
+				sourceCompatibility = 1.7
+				targetCompatibility = 1.7
+				javadoc {
+					options.links << 'http://docs.oracle.com/javase/jp/7/api/'
+				}
+			}
+			project(':arithmetic-lib') {}
+			project(':arithmetic-main') {
+				apply plugin: 'application'
+				mainClassName = 'com.example.cli.SimpleCalc'
+				applicationName = 'SimpleCalc'
+				dependencies {
+					compile project(':arithmetic-lib')
+				}
+				run {
+					standardInput = System.in
+				}
+			}
+
+	단층형  - skip
+
+	프로젝트 구조 보기
+
+		gradle -q projects
+
+	6.5.4 멀티 프로젝트의 태스크
+
+		% gradle :arithmetic-lib:clean
+
+	멀티 프로젝트의 태스크 작성
+
+		subprojects {
+			...
+			task commonTask << {
+				...
+			}
+		}
+		project(':arithmetic-lib') {
+			task limitedTask << {
+				...
+			}
+		}
+
+	7장. 의존관계 관리
+
+	7.1 목적
+
+	7.2 의존관계 해결 자동화
+
+	7.2.1 configurations
+
+		메이븐의 compile, runtime 과 비슷하게
+		gradle에는 configuration이 있다.
+
+	5가지 의존관계 지정 방법
+
+		1 외부 모듈
+
+		2 파일
+
+		3 프로젝트
+
+		4 그레이들 API
+
+		5 로컬 그루비
+
+	외부 모듈 의존관계
+
+		build.gradle
+
+			configurations {
+				conf1
+			}
+			repositories {
+				mavenCentral()
+			}
+			dependencies {
+				conf1 'org.slf4j:slf4j-api:1.7.5'
+			}
+			task showDeps << {
+				configurations.conf1.each {
+					print it.name
+				}
+			}
+
+		% gradle --daemon showDeps
+
+	파일 의존관계
+
+		dependencies {
+			conf1 files("libs/sample-lib.jar")
+		}
+
+		dependencies {
+			conf1 files(dir: "libs", include: "**/*.jar")
+		}
+
+	프로젝트 의존관계
+
+		dependencies {
+			compile project(':shared')
+		}
+
+	그레이들 API 의존관계
+
+		dependencies {
+			conf1 gradleApi()
+		}
+
+	로컬 그루비
+
+		dependencies {
+			conf1 localGroovy()
+		}
+
+	configuration 상속
+
+		configurations {
+			conf1
+			testConf1.extendsFrom conf1
+		}
+
+	7.2.4 저장소 정의
+
+	메이븐
+
+		repositories {
+			maven {
+				// pom
+				url "http://company-repositories.example.com/maven2"
+				// jar
+				artifactUrls "http://company-repositories.example.com/jars"
+				artifactUrls "http://company-repositories.example.com/jars2"
+			}
+		}
+
+	메이븐 중앙
+
+		repositories {
+			mavenCentral()
+		}
+
+	메이븐 로컬
+
+		repositories {
+			mavenLocal()
+		}
+
+	jcenter
+
+		repositories {
+			jcenter()
+		}
+
+	ivy
+
+		repositories {
+			ivy {
+				url "http://example.com/ivy-repo"
+				layout "maven"
+			}
+		}
+
+		layout 옵션 3가지
+			gradle
+			maven
+			pattern
+
+	패스워드로 보호된 저장소
+
+		repositories {
+			maven {
+				url "http://example.com/maven2"
+				credentials {
+					username 'user'
+					password 'password'
+				}
+			}
+		}
+
+	패스워드 property 파일에 저장
+
+		~/.gradle/gradle.properties
+
+			repoUser=user
+			repoPass=password
+
+		build.gradle
+
+			repositories {
+				maven {
+					url "http://example.com/maven2"
+					credentials {
+						username repoUser
+						password repoPass
+					}
+				}
+			}
+
+	단순 디렉토리 저장소
+
+		build.gradle
+
+			repositories {
+				flatDir {
+					dirs "libs", "doc-repo"
+				}
+			}
+			dependencies {
+				conf1 group: "org.slf4j", name: "slf4j-api", version: "1.7.5"
+				conf1 group: "junit", name: "junit", version: "4.11"
+				conf1 name: "index", ext: "html"
+			}
+
+	7.2.5 동적 버전과 변경성 모듈
+
+	모듈 성숙도
+
+		release						RELEASE
+		milestone					RELEASE
+		integration					SNAPSHOT
+		latest.release				SNAPSHOT을 제외한 최신 버전
+		latest.integration			SNAPSHOT을 포함한 최신 버전
+
+	변경성 모듈
+
+		24시간 로컬 캐시함
+
+		캐싱 시간을 바꾸려면
+
+			configurations.conf1.resolutionStrategy.cacheDynamicModulesFor 5, 'hours'		// 범위 지정
+			configurations.conf1.resolutionStrategy.cacheChangingModulesFor 5, 'hours'		// SNAPSHOT
+
+	7.3 전이적 의존관계 관리
+
+	7.3.1 경합 해결
+
+		그레이들의 두 가지 전략
+
+			1 newest 사용
+			2 fail
+
+		메이븐은
+
+			3 nearest 사용
+
+		경합 결과 fail 하도록 만들려면
+
+			configurations.testConf1 {
+				resolutionStrategy {
+					failOnVersionConflict()
+				}
+			}
+
+	7.3.2 transitive dependency 제외
+
+		dependencies {
+			conf1 group: 'oprg.codehaus.groovy', name: 'groovy-all', version: '2.3.1'
+			testConf1(group: 'org.spockframework', name: 'spock-core', version: 0.7-groovy-2.0') {
+				exclude module: 'groovy-all'
+			}
+		}
+
+		% gradle showDeps
+
+	7.3.3 version 강제 지정하기
+
+		dependencies {
+			conf(conf1 group: 'oprg.codehaus.groovy', name: 'groovy-all', version: '2.3.1') {
+				force = true
+			}
+			testConf1(group: 'org.spockframework', name: 'spock-core', version: 0.7-groovy-2.0')
+		}
+
+	7.3.4 client module dependency
+
+		용도 두 가지
+
+			1 의존 모듈의 메타데이터 (POM)이 잘못되었거나 맞지 않을 때, 덮어쓰기 위해
+			2 필요한 모듈을 로컬 파일 시스템에 저장해서 운영할 때
+
+	7.4 사용 중인 모듈 조사
+
+		% gradle dependencies     (mvn dependency:tree 와 동일)
+
+	7.5 캐시 제어와 오프라인 실행
+
+		캐시 디렉토리
+
+			~/.gradle/caches
+
+		SHA1 체크섬을 디렉토리명에 사용
+
+		체크섬 일치하는 파일을 찾을 때는 메이븐 폴더도 검사한다.
+
+			~/.m2/repositories
+
+	7.5.2 오프라인으로 실행하고 싶을 때
+
+		% gradle --offline showDeps
+
+		인트라넷에 저장소를 설치하고 싶을 때 아래 도구 사용
+
+			Apache Archiva
+			Artifactory
+			Nexus
+
+	3부 실전편
+
+	8. 그레이들에서의 테스트
+
+	8.1 테스트 자동화와 빌드 툴
+
+	8.1.1 테스트를 둘러싼 상황
+
+		환경 설정 자동화 도구
+
+			chef
+			puppet
+
+		환경이 제대로 설정됐는지 검증하는 테스트 프레임워크
+
+			serverspec
+
+	8.1.2 테스트 자동화를 위한 빌드 테스트
+
+		환경 설정 파일
+		특정 범위에서 테스트를 실행할 수 있을 것
+		느린 테스트를 줄일 수 있을 것
+
+	8.2 그레이들을 이용한 접근법
+
+	환경 설정 파일
+
+		demoapp/
+			environments/
+				dev/
+					env.properties
+				prod/
+					env.properties
+			build.gradle
+
+		environments/dev/env.properties
+
+			app_url=localhost
+
+		환경 지정 부분을 GString으로
+
+			task showURL << {
+				def props = new Properties()
+				props.load(new FileInputStream("environments/${env}/env.properties"))
+				println ${props.app_url}
+			}
+
+		참조 방법
+
+			% gradle -Penv=dev showURL
+
+			% gradle -Penv=prod showURL
+
+	환경마다 빌드 스크립트 사용하기
+
+		demoapp/
+			environments/
+				dev/
+					env.gradle
+				prod/
+					env.gradle
+			build.gradle
+
+		environments/dev/env.gradle
+
+			ext.app_url = 'localhost'
+
+		이 설정을 표준 build.gradle 에서 읽으려면
+
+			apply from: "environments/${env}/env.gradle"
+
+			task showURL << {
+				print "${app_url}"
+			}
+
+		% gradle -Penv=dev showURL
+
+	설정 파일 하나 안에 환경별 설정을 모두 넣기
+
+		demoapp/
+			config/
+				env.groovy
+			build.gradle
+
+		config/env.groovy
+
+			environments {
+				dev {
+					app_url = 'localhost'
+				}
+				prod {
+					app_url = '1.2.3.4'
+				}
+			}
+
+		build.gradle
+
+			task showURL << {
+				def url = new File('config/env.groovy').toURL()
+				def config = new ConfigSlurper("{env}"}.parse(url)
+				println config.app_url
+			}
+
+	8.2.2 특정 범위에서 테스트를 실행할 수 있을 것
+
+		방법 1 패턴 일치를 이용한 실행
+
+			build.gradle
+
+				test {
+					exclude '**/*IT.class'
+				}
+
+				task integrationTest(type: Test) {
+					include '**/*IT.class'
+				}
+
+			이렇게만 하면 unit test와 integration test용 클래스를 패턴으로 지정 가능.
+
+		통합 테스트 리포트 위치 변경
+
+			task integrationTest(type: Test) {
+				include '**/*IT.class'
+				reports.html.destination = file("${reports.html.destination}/integration")
+				reports.junitXml.destination = file("${reports.junitXmlk.destination}/integration")
+			}
+
+		둘 다 합쳐서 unit test는 *UT.java를 unit 아래에 리포트 생성
+		integration teste는 *IT.java를 실행하고 integration 아래에 리포트 생성
+
+			test {
+				filter {
+					includeTestsMatching '*UT'
+				}
+				reports.html.destination = file("${reports.html.destination}/unit")
+				reports.junitXml.destination = file("${reports.junitXmlk.destination}/unit")
+			}
+			task integrationTeste(type: Test) {
+				filter {
+					includeTestsMatching '*IT'
+				}
+				reports.html.destination = file("${reports.html.destination}/integration")
+				reports.junitXml.destination = file("${reports.junitXmlk.destination}/integration")
+			}
+
+		방법 2 테스트 프레임워크 기능을 이용한 실행
+
+			JUnit의 Category annotation 사용
+
+			@Category(UnitTests.class)
+			public class ArgumentParserUT {
+				...
+			}
+
+			@Category(IntegrationTests.class)
+			public class ArgumentParserIT {
+				...
+			}
+
+			이 annotation을 gradle 에서 참조하려면 useJUnit 블록 안에 지정하면 된다
+
+			test {
+				useJUnit {
+					includeCategories: 'com.example.suite.categories.UnitTests'
+				}
+			}
+			task integrationTeste(type: Test) {
+				useJUnit {
+					includeCategories: 'com.example.suite.categories.IntegrationTests'
+				}
+			}
+
+		방법 3 소스 세트 단위로 실행
+
+			src/test/java
+
+			src/integrationTest/java
+
+			build.gradle
+
+				task integrationTest(type: Test) {
+					testClassesDir = sourceSets.integrationTest.output.classesDir
+					classpath = sourceSets.integrationTest.runtimeClasspath
+					reports.html.destination = file("${reports.html.destination}/integration")
+					reports.junitXmlk.destination = file("${reports.junitXml.destination}/integration")
+				}
+
+			이 방법이 마음에 드네
+
+		8.2.3 느린 테스트 대책
+
+			1
+
+				task showTestOnly(type: Test) {
+					filter {
+						includeTestsMatching 'com.example.*.*Slowly'
+					}
+				}
+
+				% gradle showTestOnly
+
+			2
+
+				% gradle test --tests com.example.*.*Slowly
+
+			테스트를 병렬 실행
+
+				test {
+					maxParallelForks = 5
+				}
+
+				cpu 코어 개수로 지정
+
+			주기적 vm 재시작
+
+				test {
+					forkEvery = 3
+				}
+
+				3개 클래스를 테스트 한 후 재시작
+
+			JVM 메모리 세팅
+
+				test {
+					minHeapSize = '1g'
+					maxHeapSize = '1g'
+					jvmArgs '-XX:+UseG1GC'
+				}
+
+			어떤 테스트가 특히 많은 메모리를 요구하는지 알고 있다면
+
+				test {
+					filter {
+						includeTestsMatching '*UsingHHugeHeapTest'
+					}
+					minHeapSize = '1g'
+					maxHeapSize = '1g'
+				}
+
+	8.3 그레이들 테스트 자동화
+
+		테스트 종류
+
+			unit test			domain
+
+			integration test	db, domain, rest
+
+			system test			db, domain, rest, ui
+
+		unit test 디펜던시 추가
+
+			build.gradle
+
+				dependencies {
+					...
+					testCompile 'junit:junit:4.11'
+					testCompile 'org.mockito.mockito-core:1.9.5'
+				}
+
+		테스트 프로세스 수 자동 판단
+
+			test {
+				maxParallelForks = Runtime.runtime.availableProcessors() - 2
+			}
+
+		unit test 실행
+
+			% gradle test
+
+	8.3.2 integration test
+
+		그루비로 개발된 Spock 사용
+
+			build.gradle
+
+				dependencies {
+					...
+					testCompile 'org.spockframework:spock-core:0.7-groovy-2.0'
+					testCompile 'org.spockframework:spock-spring:0.7-groovy-2.0'
+					testCompile 'org.springframework:spring-test:4.0.3.RELEASE'
+				}
+
+		소스 세트 분리
+
+			src/
+				integrationTest/
+					groovy/
+					resources/
+
+			소스 세트에 추가
+
+				sourceSets {
+					integrationTest {
+						groovy.srcDir file('src/integrationTest/groovy')
+						resources.srcDir file('src/integrationTest/resources')
+						compileClasspath = sourceSets.main.output + configurations.testCompile
+						runtimeClasspath = output + sourceSets.main.output + configurations.testRuntime
+					}
+				}
+
+		태스크도 별도로 필요함
+
+			task integrationTest(type: Test) {
+				group = 'verification'
+				testClassesDir = sourceSets.integrationTest.output.classesDir
+				classpath = sourceSets.integrationTest.runtimeClasspath
+			}
+
+			(*) 태스크를 verification 그룹에 추가하면 % gradle tasks 를 실행했을 때 teset 나 check 와 같은 그룹의 태스크로 인식된다.
+
+		리포트도 별도 디렉토리에 생성
+
+			test {
+				reports.html.destination = file("${reports.html.destination}/unit")
+				reports.junitXmlk.destination = file("${reports.junitXml.destination}/unit")
+			}
+			task integrationTest(type: Test) {
+				...
+				reports.html.destination = file("${reports.html.destination}/integration")
+				reports.junitXmlk.destination = file("${reports.junitXml.destination}/integration")
+			}
+
+		환경별 DB 설정
+
+			demoapp/
+				environments/
+					integration/
+						env.properties
+					functional/
+						env.properties
+					production/
+						env.properties
+
+			각 파일을 환경에 따라 적절히 classpath로 복사하려면
+
+			build.gradle
+
+				task copyEnvironmentResource(type: Copy) {
+					from "environments/${env}/env.properties
+					into project.sourceSets.main.output.resourcesDir
+				}
+				classes.dependsOn copyEnvironmentResource
+
+			% gradle -Penv=dev integrationTest
+
+	8.3.3 시스템 테스트
+
+		통합 테스트에서는 Spock 과 Geb 을 조합하여 사용
+
+		build.gradle
+
+			dependencies {
+				testCompile "org.gebish:geb-core:0.9.2"
+				testCompile "org.gebish:geb-spock:0.9.2"
+				testCompile "org.seleniumhq.selenium:selenium-firefox-driver:2.41.0"
+				testCompile "org.seleniumhq.selenium:selenium-support:2.41.0"
+			}
+
+		웹 앱 실행을 위해 tomcat 플러그인 사용
+
+			build.gradle
+
+				buildscript {
+					repositories {
+						jcenter()
+					}
+					dependencies {
+						classpath 'com.bmuschko:gradle-tomcat-plugin:2.0'
+					}
+				}
+				apply plugin: 'com.bmuschko.tomcat-base'
+					...
+				dependencies {
+					def tomcatVersion = '7.0.52'
+					tomcat "org.apache.tomcat.embed:tomcat-embed-core:${tomcatVersion}", "org.apache.tomcat.embed:tomcat-embed-logging-juli:${tomcatVersion}"
+					tomcat("org.apache.tomcat.embed:tomcat-embed-jasper:${tomcatVersion}") {
+						exclude group: 'org.eclipse.jdt.core.compiler', module: 'ecj'
+					}
+				}
+
+		소스 세트 분리
+
+			demoapp/
+				src/
+					functionalTest/
+						groovy/
+						resources/
+
+			sourceSets {
+				functionalTest {
+					groovy.srcDir file('src/functionalTest/groovy')
+					resources.srcDir file('src/functionalTest/resources')
+					compileClasspath = sourceSets.main.output + configurations.testCompile
+					runtimeClasspath = output + sourceSets.main.output + configurations.testRuntime
+				}
+			}
+
+		태스크 추가
+
+			tomcat 사전 실행을 위해 TomcatRunWar 사용
+
+			build.gradle
+
+				ext {
+					tomcatStopPort = 8081
+					tomcatStopkey = 'stopKey'
+				}
+
+				task tomcatRun4FunctionalTest(type: com.bmuschko.gradle.tomcat.tasks.TomcatRunWar) {
+					stopPort = tomcatStopPort
+					stopKey = tomcatStopkey
+					daemon = true
+				}
+
+				task tomcatStop4FunctionalTest(type: com.bmuschko.gradle.tomcat.tasks.TomcatStop) {
+					stopPort = tomcatStopPort
+					stopKey = tomcatStopkey
+					daemon = true
+				}
+
+			통합 테스트와 다른 점은
+			Geb 설정에 브라우저 종류를 지정해야 하고
+			화면 캡처 출력 위치를 지정해야 함
+
+				build.gradle
+
+					task functionalTest(type: Test) {
+						testClasses = sourceSets.functionalTest.output.classesDir
+						classpath = sourceSets.functionalTest.runtimeClasspath
+						reports.html.desitnation = file("${reports.html.destination}/functional")
+						reports.junitXml.desitnation = file("${reports.junitXml.destination}/functional")
+						group = 'verification'
+						systemProperty 'geb.env', 'firefox'
+						systemProperty 'geb.build.reportsDir', 'reporting.file("geb")
+						dependsOn tomcatRun4FunctionalTest
+						finalizedBy tomcatStop4FunctionalTest
+					}
+
+			JVM 옵션 설정
+
+					task functionalTest(type: Test) {
+						...
+						minHeapSize = '512m'
+						maxHeapSize = '512m'
+						jvmArgs '-XX:PermSize=128m', '-XX:MaxPermSize=128m'
+					}
+
+					JDK 8에서는 Perm 영역이 없어졌으므로 이 세팅이 필요없다
+
+			실행
+
+				% gradle -Penv=functional functionalTest
+
+	8.4 테스트 관련 기능
+
+	8.4.1 로그 출력 제어
+
+		build.gradle
+
+			test {
+				testLogging {
+					showStandardStreams = true
+				}
+			}
+
+		기본 unit test 로그 출력은 FAILED로 세팅되어 있고
+		이벤트를 추가 출력하려면 이벤트를 추가해야 한다.
+
+			test {
+				testLogging {
+					events 'started', 'skipped', 'failed'
+				}
+			}
+
+		% gradle clean build
+
+		displayGranularity 값을 작게 하면 로그를 적게 크게 하면 많은 로그가 출력된다.
+		0은 root 프로세스, 1은 실제 테스트 프로세스.  기본값은 2이다.
+
+	8.4.2 테스트 리포트 출력 제어
+
+		책 참조
+
+	8.4.3 디버그 모드에서 테스트 하기
+
+		자바의 디버깅 모드
+
+			-Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=5005
+
+		그레이들의 디버깅 모드 두 가지
+
+			1 build.gradle
+
+				test {
+					debug = true
+				}
+
+			2 % gradle test --debug-jvm
+
+			// 포트는 5005로 고정됨
+			이 옵션은 그레이들 1.12에서 추가된 기능임
+
+	9.2 안드로이드 프로젝트 적용
+
+		동작 환경
+
+			안드로이드 플러그인 0.12.0
+			안드로이드 SDK 20.0.0
+			그레이들 1.12
+			자바 1.7.0_21
+
+		안드로이드 스튜디오는
+
+			IDEA 베이스
+
+		안드로이드 빌드
+
+			build.gradle
+
+				buildscript {
+					repositories {
+						mavenCentral()
+					}
+					dependencies {
+						classpath 'com.android.tools.build:gradle:0.12.+'
+					}
+				}
+				apply plugin: 'android'
+				android {
+					compileSdkVersion 'android-L'
+					buildToolsVersion '20.0.0'
+				}
+
+	9.2.1 CLI 이용하여 작성하기
+
+		% android -h create project
+
+		두 가지 방법
+
+		1 -g (--gradle) 그레이들 템플릿 이용
+
+		2 -v (--gradle-version) 안드로이드 플러그인 이용
+
+		예
+
+			% android create project -n Sample1 -v 0.12.+ -g -t 1 -p Project1 -k com.demo -a SampleActivity
+
+			-t 이후의 값은 android list targets 를 실행하여 적당한 값을 고른다
+
+	9.2.2 안드로이드 스튜디오를 이용하여 작성하기
+
+		CLI는 싱글 프로젝트만 생성 가능
+
+		안드로이드 스튜디오는 멀티 프로젝트만 생성 가능
+
+	9.3.1 안드로이드 플러그인 특징
+
+		안드로이드 플러그인 이름의 변경
+
+		0.12.0에서 아래 두 가지 모두 사용 가능
+
+			예전 apply plugin: 'android'
+
+			현재 apply plugin: 'com.android.application'
+
+		안드로이드 빌드 스크립트 구성
+
+			1 buildscript 블록
+
+			2 플러그인
+
+			3 android 블록
+
+			4 dependencies 블록
+
+	9.3.2 내장 태스크
+
+		assemble 태스크		프로젝 어셈블, 결과는 apk 또는 aar
+
+		check 태스크		android lint를 실행
+
+		build 태스크		assemble과 check를 모두 실행
+
+		clean 태스크		빌드 결과를 삭제
+
+		태스크 목록을 확인하려면
+
+			% gradlew tasks
+
+			또는
+
+			% gradlew tasks --all
+
+	9.3.3 서명 첨부 apk 파일 작성법
+
+		assemble을 해서 출시용 apk를 생성해도 서명 첨부 apk파일이 생성되지는 않는다
+
+		서명 첨부 apk를 생성하려면 빌드 스크립트의 android dsl에 다음 설정을 추가해야 한다.
+
+		1 signingConfigs 블록에 사용할 키를 설정. 'demoConfig'는 예제명이다.
+
+			signingConfigs {
+				demoConfig {
+					keyAlias 'demo'
+					keyPassword 'password'
+					storeFile file('demo.keystore')
+					storePassword 'keystore'
+				}
+			}
+
+		2 buildTypes 블록의 임으 빌드 타입에 서명을 설정한다
+
+			buildTypes {
+				release {
+					signingConfig signingConfigs.demoConfig
+				}
+			}
+
+		이렇게 한 후
+
+			% gradle assemble
+
+		build/output/apk 에 서명된 apk 파일이 생긴다
+
+		빌드 스크립트에 패스워드를 넣는 것이 문제가 된다면 환경변수를 이용해본다
+
+			signingConfigs {
+				demoConfig {
+					keyAlias System.getenv("KEY_ALIAS")
+					keyPassword System.getenv("KEY_PASSWORD")
+					storeFile file('demo.keystore')
+					storePassword System.getenv("STORE_PASSWORD")
+				}
+			}
+
+	9.3.4 빌드 타입과 제품 특성, 빌드 변형
+
+		android dsl의 defaultConfig 블록으로 지정한 manifest에는
+
+			1 buildTypes
+
+				debug
+
+				staging
+
+				release
+
+			2 productFlavors
+
+				free
+
+				pro
+
+	9.3.5 디렉토리 구조
+
+		 java/
+		 AndroidManifest.xml
+		 res/
+		 aidl/
+		 assets/
+		 jni/
+		 rs/
+
+	10장 IDE와의 연계
+
+		이클립스 4.5 Mars - 플러그인을 추가해야 그레이들 이용 가능
+
+		IDEA - 그레이들 기본 지원
+
+	10.2 이클립스
+
+	10.2.1 플러그인 설치
+
+		Eclipse Marketplace에서 gradle을 검색하여 Gradle IDE Pack 전체 또는 일부 (Gradle Integration for Eclipse 5.5.0 GA)를 설치
+
+		New project
+
+			Quickstart는 싱글 프로젝트
+
+			나머지 두 개는 멀티 프로젝트 (복잡하므로 이 경우에는 기존 그레이들 프로젝을 이용하는 것이 좋다) 먼 소리?
+
+		정리하면 프로젝트 생성은 바깥에서 하고 이클립스에서 불러오는 것이 적당하다.
+
+		그레이들에서 이클립스 프로젝트 작성하기
+
+			1 build.gradle 에 아래를 넣고
+
+				apply plugin: 'eclipse'
+
+			2 % gradle eclipse 실행
+
+			3 이클립스에서 '기존 프로젝트 임포트'
+
+		멀티 프로젝트일 경우 루트에 아래를 넣어 주어야 한다
+
+			allprojects {
+				apply plugin: 'eclipse'
+			}
+
+		코드 완성을 사용하고 싶다면 Greclipse 설치도 고려해보자
+
+		빌드 스크립트를 실행하는 방법 3가지
+
+			1 마우스 오른 클릭 Gradle
+
+			2 Gradle Tasks 윈도
+
+			3 아무스 오른 클릭 Run As > Gradle Build...
+
+		그레이들 관련 설정 위치
+
+			Windows > Preferences > Gradle
+
+				여기서 Use Gradle wrapper's default 사용해보자
+				이거 켜면 gradle.properties 파일이 우선 사용된다
+
+	10.4 IDEA의 그레이들 지원
+
+		자동 지원함. 설명 버전은 13.1.2
+
+		이때도 멀티 프로젝은 CLI로 생성한 후 읽어들이는 것이 더 편리하다
+
+		그레이들에서 IDEA 프로젝트 생성하기
+
+			1 apply plugin: 'idea'를 추가하고
+
+			2 % gradle idea 실행
+
+	10.6.5 각 IDE의 프로젝트 설정 파일을 관리해야 하는가
+
+		근간은 build.gradle 이다 (pom.xml 처럼)
+
+		규칙
+
+			build.gradle로 재생성할 수 있는 것은 버전 관리하지 않는다
+
+			빌드 스크립트와 관련 없는 프로젝트 설정 파일은 버전 관리한다
+
+			구체적으로 뭘 버전 관리해야 하나?  답하기 어려운 질문이다
+
+		이클립스
+
+			.project
+			.classpath
+			.settings/
+
+		넷빈즈
+
+			.nb-gradle		// 항상 무시
+
+		IDEA
+
+			.ipr		이것은 .idea/ 안의 모든 파일에 해당한다
+			.idea/workspace.xml 파일은 iws 파일에 해당
+			.iml 파일은 모두 의미가 같고 역할도 같다
+			위의 세 파일은 모두 버전 관리 불가능하다
+
+	11장 Jenkins 연동
+
+	11.1.1 Gradle 플러그인 설치
+
+		젠킨스 사용 시 아래 플러그인도 같이 설치하도록 하자
+
+			Gradle 플러그인
+			Env Inject 플러그인
+			Config File Provider 플러그인
+			Dry Run 플러그인
+
+		환경 변수 GRADLE_EXT_SWITCHES 가 정의되어 있으면 CLI에 추가된다
+
+		환경 변수 GRADLE_EXT_TASKS 애 태스크를 지정하면 빌드 시 실행된다
+
+	11.2.2 환경 변수나 설정 파일 준비
+
+		환경 정보는
+
+		1 환경 변수
+
+		2 속성 파일 (local.properties)
+
+		에 저장된다
+
+		각 플러그인 사용법 책 참조
+
+	11.3 code inspection
+
+	그레이들이 checkstyle을 기본 지원하므로 실제로 해야 할 설정은
+
+		1 build.gradle 에 플러그인 추가
+
+			apply plugin: 'checkstyle'
+
+		2 gradle/config/checkstyle/checkstyle.xml 파일 추가
+
+	이 스타일 파일은 어디서 구하는가
+
+		http://sourceforge.net/projects/checkstyle/files
+
+		checkstyle_checks.xml 파일을 다운로드하여 이름을 checkstyle.xml로 변경해준다
+
+	젠킨스 설정 Postbuild에
+
+		Report violations을 추가하고
+
+			checkstyle: 10, 999, 999, build/reports/checkstyle/*.xml 을 추가
+
+	뭔 태스크가 있나 보는 명령
+
+		% gradle tasks --all
+
+	특정 태스크를 잠시 제외하려면
+
+		% gradle -x checkstyleTest build
+
+	특정 태스크를 영원이 제외하려면
+
+		build.gradle
+
+			task checkstyleTest(overwrite: true) << { }
+
+	규칙 위반을 감지해도 계속 진행하려면
+
+		build.gradle
+
+			checkstyleMain {
+				ignoreFailures = true
+			}
+
+	11.3.2 findbugs
+
+		책 참조
+
+	11.3.3 jacoco
+
+		cobertura가 오랜 역사를 자랑하지만
+
+		그레이들이 기본 지원하는 것은 jacoco 이다.
+
+		1 apply plugin: 'jacoco'
+
+		젠킨스 violation 플러그인이 jacoco를 기본 지원하지 않으므로
+
+		2 젠킨스에 jacoco 플러그인을 추가해준다
+
+		빌드하면
+
+		3 build/jacoco/test.exec 에 결과 출력됨
+
+	12장 압축 파일 생성과 파일 퍼블리싱
+
+	12.1 그레이들의 압축 파일
+
+		task myZip(type: Zip) {
+			...
+		}
+
+		책 참조
+
+	12.2 압축 태스크
+
+	12.2.1 압축에 포함할 파일 지정
+
+		from()
+		include()
+		exclude()
+
+	12.2.2 압축 파일 내 위치 지정
+
+		into()
+
+	12.2.3 CopySpec 과 내포형 압축 설정
+
+		책 참조
+
+	12.2.4 압축 시 파일명 변경하기
+
+		rename()
+
+	12.2.5 압축 시 파일 내용 변경하기
+
+		CopySpec의 filter(), expand() 사용
+
+	12.2.6 압축 파일 생성 위치 설정
+
+		baseName 속성
+
+		그외 속성들
+
+			<destinationDir>/<baseName>-<appendix>-<version>-<classifier>.<extension>
+
+		플러그인을 이용한 압축 태스크 자동 설정
+
+			apply plugin: 'base'
+
+	12.3 압축 형식별 고유 설정
+
+	12.3.1 Zip
+
+	12.3.2 Tar
+
+	12.3.3 Jar
+
+	12.3.4 War
+
+		특별한 이유가 없다면 직접 War를 생성하는 것보다 War 플러그인을 사용하자
+
+	12.4 Distribution 플러그인
+
+		apply plugin: 'distribution'
+
+	12.5 그레이들을 이용한 파일 퍼블리싱
+
+		maven publish 플러그인 또는
+
+		ivy publish 플러그인을 대신 사용
+
+	12.6 모듈 정의
+
+		스킵
+
+	12.7 모듈 퍼블리싱
+
+		스킵
+
+	12.8 bintray/jcenter 메이븐 저장소에 퍼블리싱
+
+	12.8.6 jcenter 메이븐 저장소에 퍼블리싱 하기
+
+	12.9 메이븐 중앙 저장소에 퍼블리싱
+
+	12.9.1 퍼블리싱 조건
+
+		1 POM에 아래 필드 필요
+
+			modelVersion
+			groupId
+			artifactId
+			version
+			packaging
+			name
+			description
+			url
+			licenses
+			scm
+			url
+			connection
+			developers
+
+		2 <artifactId>-<version>-sources.jar 포함
+
+		3 <artifactId>-<version>-javadoc.jar 포함
+
+		4 모든 모듈에 PGP 서명
+
+		5 서명키 hkp://pool.sks-keyservers.net 에 퍼블리싱
+
+	12.9.2 메이븐 중앙 저장소에 퍼블리싱
+
+		maven publish 플러그인은 서명을 지원하지 않으므로 대신 bintray를 이용
+
+		절차
+
+			1 서명에 사용할 비밀키를 bintray에 업로드
+
+			2 서명의 공개키를 키 서버에 업로드
+
+			3 bintray에 모듈 업로드
+
+			4 bintray가 나의 비밀키로 모듈에 서명
+
+			5 jcenter에서 내 모듈을 링크
+
+			6 jcenter가 내 모듈을 메이븐 중앙 저장소와 동기화
+
+			7 메이븐 중앙 저장소가 내 서명을 키 서버에 대해 확인
+
+			8 끝
+
+	12.9.4 서명에 사용할 키 쌍 준비하기
+
+		gpg --version
+
+		gpg --gen-key
+
+		gpg --list-keys
+
+	13.1 빌드 스크립트의 분할과 구조화
+
+	13.1.1 메서드 클래스 추출
+
+		build.gradle
+
+			task run << {
+				final greeting = new Greeting(content: "Hello")
+				printGreeting(greeting)
+			}
+
+			void printGreeting(Greeting greeting) {
+				println "Greeting: $greeting.content"
+			}
+
+			class Greeting {
+				String content
+			}
+
+		% gradle run
+
+	13.1.2 프로젝트 분할
+
+		프로젝트가 커지면 멀티 프로젝트로.
+
+		속성, 메서드 상속 가능.
+
+		인젝션도 가능.
+
+		서브 프로젝에서 상속을 많이 하면 이해하기 힘들기 때문에 인젝션 사용을 추천.
+
+	13.1.3 외부 라이브러리 사용
+
+		빌드 스크립트에서 외부 jar 파일을 사용할 수 있다.
+
+		build.gradle
+
+			buildscript {
+				repositories {
+					mavenCentral()
+				}
+				dependencies {
+					classpath "org.apache.commons:commons-lang3:3.3.1"
+				}
+			}
+			import org.apache.commons.lang3.StringUtils
+			task run << {
+				println StringUtils.removeEnd("http://www.gradle.org/", "/")
+			}
+
+		% gradle run
+
+	13.1.4 외부 온라인 빌드 스크립트 사용
+
+		http://raw.githubusercontent.com/xxxuser/ample-buildscript/master/build.gradle
+
+			task externalTask << {
+				println "from an external task"
+			}
+
+		build.gradle
+
+			apply from: "http://raw.githubusercontent.com/xxxuser/ample-buildscript/master/build.gradle"
+			task run(dependsOn: "externalTask") << {
+				println "task is complete"
+			}
+
+		% gradle run
+
+		Handshake alert:unrecognized_name 에러가 발생하면 아래와 같이 해보자.
+
+		% gradle -Djsse.enableSNIExtension=false run
+
+	13.1.5 buildSrc 프로젝트
+
+		프로젝 폴더에 buildSrc 를 만고 java 또는 groovy 코드를 넣으면 자동 컴파일 되어 참조됨
+
+		build.gradle
+
+			task run << {
+				final greeting = new Greeting(content: "Hello")
+				printGreeting(greeting)
+			}
+			void printGreeting(Greeting greeting) {
+				println "Greeting: $greeting.content"
+			}
+
+		buildSrc\src\main\groovy\Greeting.groovy
+
+			class Greeting {
+				String content
+			}
+
+		이렇게 groovy 파일을 넣어 두면 암묵적으로 다음 코드가 build.gradle 에 추가된 것과 같다.
+
+			apply plugin: 'groovy'
+			dependencies {
+				compile gradleApi()
+				compile localGroovy()
+			}
+
+	13.1.6 사용자 정의 태스크 작성
+
+		방법 1
+
+		task myTask << {
+			println "Hello World"
+		}
+
+		이렇게 정의한 태스크는 다른 빌드 스크립트에서 apply from 을 이용하여 사용할 수 있다.
+
+		방법 2
+
+		뭔 소리인지
+
+		방법 3 (추천)
+
+			task myTask(type: MyTask) {				// << 이 없으므로 평가 단계에서 실행
+				target = "world"
+			}
+			class MyTask extends DefaultTask {
+				String target
+				@TaskAction
+				void greet() {
+					println "Hello $target"
+				}
+			}
+	13.2 원격 서버 조작
+
+		절차
+
+			1 새 war 파일을 리모트 서버로 전송
+
+			2 새 war 파일의 owner를 변경
+
+			3 tomcat 정지
+
+			4 옛 war 파일을 삭제
+
+			5 새 war 파일을 tomcat 아래로 이동
+
+			6 tomcat 시작
+
+	13.2.1 ssh 플러그인을 추가
+
+		buildscript {
+			repositories {
+				jcenter()
+			}
+			dependencies {
+				classpath 'org.hidetake:gradle-ssh-plugin:0.4.2'
+			}
+		}
+		apply plugin: 'org.hidetake.ssh'
+
+		이 플러그인은 java의 ssh 클라이언트 라이브러리인 jsch를 이용하여 만든 것
+
+	13.2.2 빌드 스크립트 정의, 실행
+
+		프로젝 프로퍼티에 host, username, host.identiy.file 정의
+
+		build.gradle
+
+			remotes {
+				app01 {
+					host = project.properties["host"]
+					user = project.properties["username"]
+					identiy = file(project.properties["host.identiy.file"]
+					knownHosts = allowAnyHosts
+				}
+			}
+
+			task deploy(type: SshTask) {
+				description = "A task copying WAR file to tomcat host"
+				final archivePath = project.properties["war.archivePath"]
+				final tomcatHome = "/var/lib/tomcat7/webapps"
+				final warName = "ROOT"
+				session(remotes.app01) {
+					println "Copying file to /home/ubuntu/${warName}.war"
+					put(archivePath, "/home/ubuntu/${warName}.war")
+
+					println "Changing owner"
+					executeSudo("chown tomcat7:tomcat7 ~/${warName}.war")
+
+					println "Stopping tomcat"
+					executeSudo("service tomcat7 stop")
+
+					println "Deleting ROOT.war"
+					executeSudo("rm -rf ${tomcatHome}/${warName}.war")
+					executeSudo("rm -rf ${tomcatHome}/${warName}")
+
+					println "Moving ROOT.war to tomcat directory"
+					executeSudo("mv ~/${warName}.war ${tomcatHome}")
+
+					println "Starting tomcat"
+					executeSudo("service tomcat7 start")
+				}
+			}
+
+		이제 실행해볼까
+
+		% gradle -Phost=host1 -Pusername=user1 -Phost.identity.file=keyfile1 -Pwar.archivePath=build/app1.war deploy
+
+		여기서는 직접 linux 명령들을 실행했으나
+		gradle 에서 다른 명령을 실행하는 것도 가능하므로
+		chef, puppet 같은 provisioning 도구를 이용하는 것도 가능하다.
+
+	13.3 프록시 설정
+
+		생략
+
+	13.4 사용자 정의 그레이들 작성 및 배포
+
+		규칙 예제
+
+			1 프록시 설정은 gradle.properties에 넣을 것
+
+			2 사내 nexus url은 사내 위키에 있으니 build.gradle의 repositories 에 넣을 것
+
+			3 라이브러리 버전 1.8은 라이센스 문제가 있으므로 사용하지 말 것
+
+	13.4.1 사용자 정의 그레이들로 할 수 있는 것
+
+		build.gradle
+
+			configurations {
+				runtime
+			}
+			dependencies {
+				runtime name: "my-company", ext: "jar"
+			}
+			task showDeps << {
+				configurations.runtime.each { File file ->
+					println file
+				}
+			}
+
+	13.4.2 초기화 스크립트를 이용한 사용자 정의 그레이들 작성
+
+		Project: gradle-example-p555
+
+			build.gradle
+			   1: configurations {
+			   2: 	runtime
+			   3: }
+			   4: dependencies {
+			   5: 	runtime name: "my-company", ext: "jar"
+			   6: }
+			   7: task showDeps << {
+			   8: 	configurations.runtime.each { File file ->
+			   9: 		println file
+			  10: 	}
+			  11: }
+
+			init.gradle
+			   2: allprojects {
+			   3: 	repositories {
+			   4: 		maven {
+			   5: 			url "http://repo.example.com/maven2"
+			   6: 		}
+			   7: 		flatDir {
+			   8: 			dirs "lib"
+			   9: 		}
+			  10: 	}
+			  11: }
+
+		% gradle -Iinit.gradle showDeps
+
+	13.4.3 그레이들 래퍼를 이용한 사용자 정의 그레이들 배포
+
+		% gradle wrapper
+
+		% ff
+			build.gradle
+		+	gradle\wrapper\gradle-wrapper.jar
+		+	gradle\wrapper\gradle-wrapper.properties
+		+	gradlew
+		+	gradlew.bat
+			init.gradle
+			lib\my-company.jar
+
+		프록시 설정을 공유하겠다면
+
+		init.gradle
+
+			System.setProperty("http.proxyHost", "proxy.example.com")
+			System.setProperty("http.proxyPort", "8080")
+			System.setProperty("http.nonProxyHosts", "127.0.0.1|localhost")
+
+	13.5.1 빌드 비교 플러그인
+
+	14장 다른 빌드 툴을 그레이들로 이식
+
+	가능한 경로
+
+		1 build.gradle에서 ant task 호출 가능
+
+		2 ant build.xml을 그대로 두고 build.gradle로 임포트 가능
+
+		3 maven pom.xml을 build.gradle로 변환 가능
+
+	ant 프로젝
+
+		1 ant의 build.xml을 버리고 동일한 기능의 build.gradle을 처음부터 재작성
+
+		2 ant의 build.xml을 그대로 두고, build.gradle에서 build.xml을 임포트하여 재사용
+
+	maven 프로젝
+
+		1 pom.xml을 버리고 build.gradle을 재작성
+
+		2 pom.xml을 build.gradle로 변환 후 수정하여 사용 (플러그인들은 수도 수정해줘야 함)
+
+	14.2.1 build.gradle에서 build.xml 읽기
+
+		build.gradle
+
+			ant.importBuild "build.xml"
+
+		이 import 한 줄로 충분
+
+		% gradle tasks --all
+
+		특정 ant 태스크인 jar를 호출해본다
+
+		% gradle jar
+
+		ant의 프로퍼티도 참조 가능함, 생략
+
+	14.3 메이븐에서 그레이들로 변환
+
+		1 연동 기능 없다
+
+		2 pom.xml to build.gradle 변환 기능이 있다
+
+		3 모든 메이븐 플러그인에 대해 상응하는 gradle 플러그인이 있는지 조사해야 한다
+
+	14.3.1 pom.xml to build.gradle
+
+		그레이들 프로젝트 초기화
+
+		% gradle init --type pom
+
+		type 기본값이 pom 이므로
+
+		% gradle init
+
+		이것도 동일 기능임. 아래 명령으로 빌드해본다.
+
+		% gradlew build
+
+		pom.xml의 흔한 설정인 project.build.sourceEncoding은 자동 변환되지 않는다.
+		변환 후 수동 수정해주자.
+
+	mvn jar to gradle 변환 연습
+
+		생성
+
+			mvn-new-jar mvn-jar-to-gradle
+
+		빌드 및 테스트
+
+			mvn clean install
+			java -cp target\mvn-jar-to-gradle-1.0-SNAPSHOT.jar com.demo.App
+			mvn test
+			mvn clean
+
+		변환
+
+			gradle init --type pom
+
+		빌드 및 테스트
+
+			gradle build
+			java -cp build\libs\mvn-jar-to-gradle-1.0-SNAPSHOT.jar com.demo.App
+			gradle clean
+
+	14.3.2 그레이들이 지원하는 pom 요소
+
+	변환 가능한 pom 요소
+
+		1 groupId, artifactId, version 은 변환됨
+
+		2 pom의 외부 dependencies는 그레이들의 dependencies로 변환됨
+
+		3 pom의 sub-module은 gradle의 project 으로 변환됨
+
+	메이븐과 그레이들의 의존관계 해결 차이
+
+		메이븐		nearest
+
+		그레이들	newest
+
+	그레이들에서 경합 해결을 위해 버전 고정 방법
+
+		build.gradle
+
+			compile 'com.example:aaa:1.0'
+			compile('com.example:bbb:2.0') {
+				force = true
+			}
+
+		2.0을 항상 사용
+
+	멀티 모듈
+
+		그레이들의 init 태스크는 메이븐 멀티 모듈을 그레이들 멀티 모듈로 변환한다.
+
+	모듈 타입
+
+		packging이 jar인 것은 java plugin, war인 것은 war plugin으로 변환됨
+
+	effective pom
+
+		init 변환 태스크는 pom.xml을 effective pom 형태로 읽어들인다
+		그러므로 상속을 이용하는 pom.xml의 프로퍼티도 반영된다.
+
+	코드 jar 파일 작성
+
+		maven-source-plugin 내용은 그레이들로 변환된다
+
+	변환 제약
+
+		멀티 모듈이 아닌 pom에 대해서는 몇 가지 안 될 수 있다
+			war plugin 적용 안 됨
+			maven-source-plugin 적용 안 됨
+			test scope 적용 안 됨
+
+	부록 A CLI 옵션과 환경 변수
+
+	A.1 CLI 옵션
+
+		정보 표시
+
+			-h, --help
+
+			-v, --version
+
+			--all
+
+			--profile					build/reports/profile 디렉토리에 실행 시간 리포트 생성
+
+		파라미터 설정
+
+			-b, --build-file
+
+			-p, --project-dir
+
+			-c, --settings-file
+
+			-D, --system-prop			자바 프로퍼티 지정
+
+			-P, --project-prop
+
+			-g, --gradle-user-home
+
+			-I, --init-script
+
+		빌드 동작 제어
+
+			-a, --no-rebuild
+
+			--continue					test 실패해도 계속 진행
+
+			--configure-on-demand		빌드 실행에 관련된 프로젝트만 설정한다? Q: 뭔 소리?
+
+			-m, --dry-run				mvn validate 비슷한 거?
+
+			--parallel					병렬 실행. 쓰레드 수는 그레이들이 자동 결정.
+
+			--parallel-threads
+
+			--rerun-tasks				태스크 최적화 하지 않고 (UP-TO-DATE 체크없이) 모두 실행
+
+			-u, --no-search-upwards		부모 디렉토리의 settings.gradle 탐색하지 말 것
+
+			-X, --exclude-task
+
+		로그 출력
+
+			-d, --debug
+
+			-i, --info
+
+			-q, --quite
+
+			-S, --full-stacktrace		예외 발생 시 모든 스택 트레이스 출력
+
+			-s, --stacktrace			예외 발생 시 사용자 스크립트의 스택 트레이스만 출력
+
+		캐시 오프라인 관련
+
+			--offline
+
+			--refresh-dependencies		의존관계 재계산 후 로컬 캐시 업데이트
+
+			--project-cache-dir			기본값은 ~/.gradle
+
+			--recompile-scripts
+
+		그레이들 데몬
+
+			--daemon
+
+			--foreground				데몬을 foreground로 실행. 문제 발생 시 추적용.
+
+			--non-daemon
+
+			--stop
+
+		기타
+
+			--gui
+
+			--no-color
+
+	A.2 시스템 속성
+
+		gradle.user.home				기본값 ~/.gradle
+
+		org.gradle.daemon				--daemon ON
+
+		org.gradle.java.home
+
+		org.gradle.jvmargs
+
+		org.gradle.project.<name>		프로젝 property 설정
+
+		org.gradle.configureondemand	--configure-on-demand ON
+
+		org.gradle.parallel				--parallel ON
+
+	A.3 환경 변수
+
+		GRADLE_OPTS						여기다 --daemon, --parallel을 아예 넣을까? 안 되네.
+
+		GRADLE_USER_HOME				기본값은 ~/.gradle
+
+		JAVA_OPTS
+
+		JAVA_HOME
+
+		ORG_GRADLE_PROJECT_<name>
+
+	부록 B 내장 태스크 목록
+
+		B.1 Help
+
+		gradle projects				서브 프로젝트 (모듈) 표시
+
+		gradle tasks
+
+		gradle tasks --all			디펜던시까지 표시
+
+		gradle help
+
+		gradle help --task <name>
+
+		gradle dependencies
+
+		gradle dependencies --configuration <name>
+
+		gradle dependencyInsight --dependency <name> --configuration <name>		특정 문제 해결에 유용
+
+		gradle properties
+
+		gradle components
+
+	부록 C 그레이들 플러그인
+
+		C.1 기본 플러그인
+
+		C.1.1 언어 플러그인
+
+			java
+
+			groovy
+
+			scala
+
+			antlr
+
+			외 6개
+
+		C.1.2 통합 플러그인
+
+			application
+
+			ear
+
+			jetty
+
+			maven
+
+			osgi
+
+			war
+
+			distribution
+
+			java-librarydistribution
+
+			ivy-publish
+
+			maven-publish
+
+		C.1.3 소프트웨어 개발 플러그인
+
+			build-announce				빌드 주기별로 통지
+
+			checkstyle
+
+			eclipse						이클립스 프로젝 파일 생성
+
+			eclipse-wtp					이클립스 WTP 프로젝 파일 생성
+
+			findbugs
+
+			idea						idea 프로젝 파일 생성
+
+			jdepend
+
+			pmd
+
+			project-report
+
+			signing
+
+			sonar						sonar runner 플러그인으로 대체될 예정
+
+			build-dashboard				빌드 대시보드 리포트 출력
+
+			build-init					그레이들 프로젝의 템플릿 생성 기능과 메이븐 pom의 변환 기능
+
+			jacoco
+
+			sonar-runner
+
+			visual-studio
+
+			wrapper						그레이들 wrapper 생성 기능
+
+			java-gradle-plugin
+
+	C.2 커뮤니티 플러그인
+
+		com.bmuschko.tomcat
+		com.bmuschko.tomcat-base		tomcat 제어용
+
+		org.hidetake.ssh				ssh 실행용
+
+		com.jfrog.bintray				bintray로 퍼블리싱
+
+		com.github.tkruse.groovysh		그루비 셸을 이용하여 대화형으로 그레에들 조작
+
+		그외 플러그인은 http://plugins.gradle.org 에서 검색해보자
+
+	부록 D 그레이들 동향
+
+		2.0 주요 변경
+
+			java 8 지원
+			groovy 2.3.2
+
+		2.1 주요 변경
+
+			groovy 2.3.6
+			plugins 블록
+			java-gradle-plugin
+			자바 코드 변경 부분만 컴파일하는 기능
+
+		2.5
+
+			continuous build 지원
+			tooling api 이용 빌드 주기별 이벤트 캐치
+			google test 지원
+			defaultDependencies 추가
+			dependencies substitution rules 도입
+
+		2.8
+
+			빌드 속도 향상
+			빌드 스크립트 컴파일 속도 향상
+			testkit api를 이용하여 클래스를 테스트에 추가 가능
+			더 강력해진 pmd 플러그인 설정
+			pmd 분석 기능 향상
+			groovy 2.4.4
+
+		2.12 as of april 2016
+
+	D.1.1 플러그인 포털을 이용한 플러그인 적용 간략화
+
+		예전에 이렇게 했다면
+
+			buildscript {
+				repositories {
+					jcenter()
+				}
+				dependencies {
+					classpath 'com.tkruse.gradle:gradle-groovysh-plugin:0.4.0'
+				}
+			}
+			apply plugin: 'groovysh'
+
+		gradle 2.1부터는 이렇게 한다.
+
+			plugins {
+				id 'com.tkruse.groovysh' version '1.0.2'
+			}
+
+		플러그인 포털 등록 방법
+
+			1 플러그인 id 결정
+
+			2 bintray에 패키지 작성
+
+			3 jcenter로 퍼블리싱
+
+			4 플러그인 패키지에 gradle-plugin 속성 부여
+
+			5 gradle plugins 저장소에 퍼블리싱
+
+			6 잠시 기다린 후 검색해본다
+
+	D.1.2 자바 코드의 변경된 부분만 컴파일 하기
+
+		기존에는 소스 세트의 파일 1개만 변경되어도 모두 컴파일을 해야했지만
+		새 기능을 이용하면 변경된 클래스만 새로 컴파일 한다
+
+		~/.gradle/init.d/init.gradle
+
+			allprojects {
+				tasks.withType(JavaCompile) {
+					options.incremental = true
+				}
+			}
+	D.1.3 빌드 결과 생성된 컴포넌트의 상세 상태를 표시하는 태스크: components
+
+	D.2 향후 계획
+
+		2014년 6월 그레이들 2.0 발표
+
+		설정 단계 속도 개선 필요 - linkedin 4000개 서브 프로젝트 빌드 대응
+
+		태스크 실행 효율화
+
+		병렬화 더
+
+		캐시 더
+
+		의존관계 강화
+
+		참고: Netflix Nebura Gradle Dependency Lock plugin
+
+		고도의 확장성
+
+		C/C++ 지원 - 구글이 NDK 지원을 make에서 gradle c/c++ 플러그인으로 변경 중
+
+	D.3 그레이들 정보
+
+		http://www.gradle.org
+
+		gradle userguide
+		https://docs.gradle.org/current/userguide/userguide.html
+
+		예제 코드
+		http://www.gradle.org/docs/current/userguide/sample_list.html
+
+		DSL 매뉴얼
+		https://docs.gradle.org/current/dsl/
+
+		API 매뉴얼
+		http://docs.gradle.org/current/javadoc/index.html
+		http://docs.gradle.org/current/groovydoc/index.html
